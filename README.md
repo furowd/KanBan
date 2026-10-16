@@ -1,6 +1,6 @@
 # Kanban Board
 
-A simple Kanban board backed by Supabase Postgres, with a FastAPI backend and React + TypeScript frontend.
+A simple Kanban board backed by Supabase Postgres, with a React + TypeScript frontend and API options for FastAPI or Cloudflare Workers.
 
 ## 1. Set up the Supabase database
 
@@ -94,28 +94,36 @@ npm run test:e2e
 
 The tests mock the API and cover drag persistence, failed-move rollback, keyboard and touch interaction, scrolling on mobile, and the existing add, dropdown-move, and delete controls.
 
-## 4. Deploy the backend to Google Cloud Run
+## 4. Deploy the API to Cloudflare Workers
 
-1. Install and authenticate the Google Cloud CLI, select a project, and enable the Cloud Run and Artifact Registry APIs.
-2. From the repository root, deploy the backend source:
+The FastAPI backend remains available for local use or other Python hosts. For an all-Cloudflare deployment, use the Worker API in `cloudflare-api`; it exposes the same `/cards` endpoints and stores data in the same Supabase table.
 
-   ```sh
-   gcloud run deploy kanban-api \
-     --source backend \
-     --region YOUR_REGION \
-     --allow-unauthenticated \
-     --set-env-vars SUPABASE_URL=https://YOUR_PROJECT.supabase.co,ALLOWED_ORIGINS=http://localhost:5173 \
-     --set-secrets SUPABASE_KEY=YOUR_SECRET_NAME:latest
-   ```
+1. In **Workers & Pages**, choose **Create application → Pages → Import an existing Git repository**. Select `furowd/KanBan`.
+2. Create the API Worker from the repository with:
+   - **Worker name:** `kanban-api`
+   - **Root directory:** `cloudflare-api`
+   - **Build command:** `npm run typecheck`
+   - **Deploy command:** `npm run deploy`
+3. In the Worker settings, add `SUPABASE_URL` as a regular variable and `SUPABASE_KEY` as a secret. Use the project URL and server-side Supabase key from Supabase **Project Settings → API**. Never add the Supabase key to the frontend or commit it to Git.
+4. The Worker URL will be `https://kanban-api.<your-account-subdomain>.workers.dev`. Test it by opening `/cards`; an empty board should return `[]`.
 
-3. Store the Supabase key in Secret Manager first, grant the Cloud Run service account access to that secret, and replace `YOUR_SECRET_NAME` and `YOUR_REGION` above. Do not pass the Supabase key as a literal environment variable.
-4. Copy the service URL printed by the command. Once the frontend is deployed, update `ALLOWED_ORIGINS` to include its public URL, then redeploy or update the Cloud Run service.
+For local Worker development, copy the example and set your Supabase values in `cloudflare-api/.dev.vars`, then run:
 
-Cloud Run sets `PORT` for the container; the included Dockerfile binds Uvicorn to that port.
+```sh
+cd cloudflare-api
+cp .dev.vars.example .dev.vars
+npm install
+npm run dev
+```
+
+Keep `.dev.vars` private and do not commit it.
 
 ## 5. Deploy the frontend to Cloudflare Pages
 
-1. Connect the repository to Cloudflare Pages.
-2. Set the root directory to `frontend`, the build command to `npm run build`, and the build output directory to `dist`.
-3. Add `VITE_API_URL` as a Pages environment variable, using the Cloud Run service URL (for example, `https://kanban-api-....run.app`). Set it for both production and preview environments as needed.
-4. Deploy. Add the resulting Pages origin to the backend's `ALLOWED_ORIGINS` setting in Cloud Run and redeploy/update the service.
+1. Create a separate Pages project from the same GitHub repository.
+2. Set **Root directory** to `frontend`, **Build command** to `npm run build`, and **Build output directory** to `dist`.
+3. Add the Pages build variable `VITE_API_URL` with the Worker URL from the previous section, for example `https://kanban-api.<your-account-subdomain>.workers.dev`.
+4. Deploy the Pages project. Its production URL will look like `https://<project-name>.pages.dev`.
+5. Set the Worker variable `ALLOWED_ORIGINS` to the exact Pages origin (for example `https://<project-name>.pages.dev`). You may include `http://localhost:5173` as another comma-separated origin for local development. Redeploy the Worker after changing its settings.
+
+Cloudflare Pages hosts the static React site. Cloudflare Workers runs the HTTP API; Pages cannot run the existing FastAPI/Uvicorn server directly.
