@@ -85,6 +85,15 @@ To verify the production build:
 npm run build
 ```
 
+Run the browser interaction tests with Chromium:
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+The tests mock the API and cover drag persistence, failed-move rollback, keyboard and touch interaction, scrolling on mobile, and the existing add, dropdown-move, and delete controls.
+
 ## 4. Deploy the backend to Google Cloud Run
 
 1. Install and authenticate the Google Cloud CLI, select a project, and enable the Cloud Run and Artifact Registry APIs.

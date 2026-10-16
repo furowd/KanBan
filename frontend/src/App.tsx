@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   DndContext,
   DragOverlay,
+  KeyboardCode,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
@@ -14,6 +15,7 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
+  type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
 import { addCard, changeCardStatus, getCards, removeCard } from "./api";
 import type { Card, Status } from "./types";
@@ -33,6 +35,72 @@ function isStatus(value: unknown): value is Status {
 const collisionDetection: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
   return pointerCollisions.length ? pointerCollisions : rectIntersection(args);
+};
+
+const keyboardColumnCoordinates: KeyboardCoordinateGetter = (
+  event,
+  { currentCoordinates, context },
+) => {
+  const isHorizontal =
+    event.code === KeyboardCode.Left || event.code === KeyboardCode.Right;
+  const isVertical =
+    event.code === KeyboardCode.Up || event.code === KeyboardCode.Down;
+  if (!isHorizontal && !isVertical) return;
+
+  const cardRect = context.collisionRect;
+  if (!cardRect) return;
+
+  const center = {
+    x: cardRect.left + cardRect.width / 2,
+    y: cardRect.top + cardRect.height / 2,
+  };
+  const locatedColumns = columns.flatMap((column) => {
+    const rect = context.droppableRects.get(`column-${column.status}`);
+    return rect ? [{ status: column.status, rect }] : [];
+  });
+  const currentColumn = locatedColumns.reduce(
+    (closest, column) => {
+      const distance = (rect: (typeof column)["rect"]) =>
+        Math.abs(rect.left + rect.width / 2 - center.x) +
+        Math.abs(rect.top + rect.height / 2 - center.y);
+      return distance(column.rect) < distance(closest.rect) ? column : closest;
+    },
+    locatedColumns[0],
+  );
+
+  if (!currentColumn) return;
+  const currentCenter = {
+    x: currentColumn.rect.left + currentColumn.rect.width / 2,
+    y: currentColumn.rect.top + currentColumn.rect.height / 2,
+  };
+  const direction =
+    event.code === KeyboardCode.Left || event.code === KeyboardCode.Up ? -1 : 1;
+  const destinations = locatedColumns
+    .filter((column) => column.status !== currentColumn.status)
+    .filter(
+      (column) =>
+        (isHorizontal
+          ? column.rect.left + column.rect.width / 2 - currentCenter.x
+          : column.rect.top + column.rect.height / 2 - currentCenter.y) *
+          direction >
+        0,
+    )
+    .sort((first, second) => {
+      const firstAxis = isHorizontal
+        ? Math.abs(first.rect.left + first.rect.width / 2 - currentCenter.x)
+        : Math.abs(first.rect.top + first.rect.height / 2 - currentCenter.y);
+      const secondAxis = isHorizontal
+        ? Math.abs(second.rect.left + second.rect.width / 2 - currentCenter.x)
+        : Math.abs(second.rect.top + second.rect.height / 2 - currentCenter.y);
+      return firstAxis - secondAxis;
+    });
+  const destination = destinations[0]?.rect;
+  if (!destination) return currentCoordinates;
+
+  return {
+    x: destination.left + (destination.width - cardRect.width) / 2,
+    y: destination.top + (destination.height - cardRect.height) / 2,
+  };
 };
 
 type TaskCardProps = {
@@ -179,7 +247,7 @@ function App() {
     useSensor(TouchSensor, {
       activationConstraint: { delay: 200, tolerance: 8 },
     }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: keyboardColumnCoordinates }),
   );
 
   useEffect(() => {
