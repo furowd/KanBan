@@ -2,3 +2,6 @@ name = "kanban-api"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 workers_dev = true
+
+[vars]
+ALLOWED_ORIGINS = "https://kanban-board-e0l.pages.dev,http://localhost:5173"
