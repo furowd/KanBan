@@ -196,6 +196,12 @@ select:disabled {
   border: 1px solid #e6e9ee;
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.64);
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.column-drop-target {
+  border-color: #9eafff;
+  background: rgba(235, 239, 255, 0.82);
 }
 
 .column-header {
@@ -260,12 +266,30 @@ select:disabled {
   border-radius: 9px;
   background: var(--paper);
   box-shadow: 0 3px 8px rgba(30, 42, 68, 0.035);
+  cursor: grab;
+  touch-action: pan-y;
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .task-card:hover {
   border-color: #d9deea;
   box-shadow: 0 5px 14px rgba(30, 42, 68, 0.06);
+}
+
+.task-card:focus-visible {
+  outline: 3px solid rgba(67, 97, 238, 0.3);
+  outline-offset: 2px;
+}
+
+.task-card-dragging {
+  opacity: 0.28;
+  cursor: grabbing;
+}
+
+.drag-overlay-card {
+  cursor: grabbing;
+  box-shadow: 0 12px 30px rgba(30, 42, 68, 0.18);
+  pointer-events: none;
 }
 
 .task-title {

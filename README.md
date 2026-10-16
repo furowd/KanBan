@@ -77,6 +77,8 @@ npm run dev
 
 The Vite development server is available at <http://localhost:5173>. The example setting points to `http://localhost:8000`; change `VITE_API_URL` in `frontend/.env` if the API uses a different URL. The backend's `ALLOWED_ORIGINS` must include the frontend origin.
 
+Move cards between columns by dragging with a mouse or touch, or use the keyboard controls announced when focusing a card. The status dropdown remains available as an alternative.
+
 To verify the production build:
 
 ```sh
